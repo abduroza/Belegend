@@ -30,7 +30,6 @@ async function deleteCategory(req, res){
             return res.status(403).json(funcHelpers.errorResponse('Only For Admin'))
         }
         let category = await Category.findByIdAndDelete(req.params.id)
-        console.log(category)
         res.status(200).json(funcHelpers.successResponse(category, "Delete category Success"))
     } catch (err) {
         res.status(404).json(funcHelpers.errorResponse(err))
