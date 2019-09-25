@@ -25,7 +25,7 @@ production:
     - apt-get update -qy
     - apt-get install -y ruby-dev
     - gem install dpl
-    - dpl --provider=heroku --app=glint-ecomerce --api-key=$HEROKU_API_KEY
+    - dpl --provider=heroku --app=belegend --api-key=$HEROKU_API_KEY
   
   only:
     - master
