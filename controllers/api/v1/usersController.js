@@ -97,28 +97,41 @@ exports.resendEmail = function(req, res, next){
 }
 
 exports.insertUsers = function(req, res, next){
-    var token = FuncHelpers.randToken();
+    var email_token = FuncHelpers.randToken();
     var hash = bcrypt.hashSync(req.body.password, saltRounds)
 
-    req.body['token']       = token;
-    req.body['exp_token']   = new Date(new Date().setHours(new Date().getHours() + 6));
-    req.body['password']    = hash
-    
+    req.body['email_token']             = email_token
+    req.body['exp_token']               = new Date(new Date().setHours(new Date().getHours() + 6))
+    req.body['password']                = hash
+    req.body['image']                   = 'https://api.adorable.io/avatars/285/'+req.body.email
+
     Users.create(req.body)
         .then((users) => {
-
+            
             var email_to        = req.body.email;
-            var email_from      = 'aku@todoglint.com';
-            var subject         = 'Verify your main in Todo-glint';
+            var email_from      = 'admin@belegend.com';
+            var subject         = 'Verify your mail in BeLegend';
 
-            var link            = "http://"+req.get('host')+"/api/v1/users/verify/"+token;
-            var html            = 'Plese click link bellow, if you register at todoglint.com<br>';
+            var link            = "http://"+req.get('host')+"/api/v1/users/verify/"+email_token;
+            var html            = 'Plese click link bellow, if you register at BeLegend.com<br>';
                 html            += '<br><strong><a href='+link+'>'+link+'</a></strong>';
                 html            += '<br><br>Thanks';
 
-            FuncHelpers.sendMail(email_to, email_from, subject, html);
+            FuncHelpers.sendMail(email_to, email_from, subject, html)
 
-            res.status(201).json(FuncHelpers.successResponse(users));
+            let jwt_token = jwt.sign(users.toJSON(), process.env.SECRET_KEY, { 
+                algorithm: 'HS256',
+                expiresIn: '1d'
+            })
+
+            let result = {
+                _id          : users._id,
+                role         : users.role,
+                image        : users.image,
+                token        : jwt_token
+            }
+
+            res.status(201).json(FuncHelpers.successResponse(result))
         })
         .catch((err) => {
             res.status(422).json(FuncHelpers.errorResponse(err))
@@ -176,10 +189,7 @@ exports.usersDelete = function(req, res) {
 
 exports.usersAuth = (req, res, next) => {
     
-    Users.findOne({$or: [
-            {"username": req.body.username},
-            {"email": req.body.username}
-        ]})
+    Users.findOne({"email": req.body.email.toLowerCase()})
         .then((users)=>{
             if(users!=null){
                 bcrypt.compare(req.body.password, users.password).then(function (result) {
@@ -189,10 +199,10 @@ exports.usersAuth = (req, res, next) => {
                             algorithm: 'HS256',
                             expiresIn: '1d'
                         });
-        
-                        res.status(200).json({ message: 'Login Success', token: token, success: true });
+
+                        res.status(200).json(FuncHelpers.successResponse(token))
                     } else {
-                        res.status(401).send({ Message: 'Username or Password is wrong',success: false  })
+                        res.status(401).send(FuncHelpers.errorResponse("Username or Password is wrong"))
                     }
                 }).catch((err) => { return next(err) })
             }else{
