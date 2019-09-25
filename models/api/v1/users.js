@@ -3,49 +3,42 @@ const Schema        = mongoose.Schema;
 var validate        = require('mongoose-validator')
 var uniqueValidator = require('mongoose-unique-validator');
 
-var usernameValidator = [
-    validate({
-      validator: 'isLength',
-      arguments: [6, 30],
-      message: 'Name should be between {ARGS[0]} and {ARGS[1]} characters',
-    })
-  ]
-
 const usersSchema = new Schema({
-    username: {
-        type: String,
-        required: true,
-        unique: true,
-        validate: usernameValidator
-    },
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        lowercase: true, 
+        trim: true
     },
     password: {
         type: String,
         required: true
     },
-    first_name: {
+    fullname: {
+        type: String, 
+        trim: true
+    },
+    image: {
         type: String
     },
-    last_name: {
-        type: String
-    },
-    user_type: {
+    role: {
         type: String,
-        enum : ['customer','merchant'],
-        default: 'customer'
+        enum : ['athlete','investor','admin'],
+        default: 'athlete'
     },
-    list_products: [{
+    id_profile_athlete: [{
         type  : Schema.Types.ObjectId, 
-        ref     : 'Product'
+        ref     : 'Profile_athlete'
+    }],
+    id_investor: [{
+        type  : Schema.Types.ObjectId, 
+        ref     : 'Investor'
     }],
     exp_token: { 
       type: Date
     },
-    token: {
+    email_token: {
         type: String
     },
     is_verified: {
