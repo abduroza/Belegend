@@ -202,11 +202,11 @@ exports.usersAuth = (req, res, next) => {
 
                         res.status(200).json(FuncHelpers.successResponse(token))
                     } else {
-                        res.status(401).send(FuncHelpers.errorResponse("Username or Password is wrong"))
+                        res.status(401).send(FuncHelpers.errorResponse("Email or Password is wrong"))
                     }
                 }).catch((err) => { return next(err) })
             }else{
-                res.status(401).send(FuncHelpers.errorResponse("Username or Password not exist"));
+                res.status(401).send(FuncHelpers.errorResponse("Email or Password not exist"));
             }
         })
         .catch((err)=>{
