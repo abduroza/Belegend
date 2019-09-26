@@ -4,15 +4,11 @@ const usersRouter = require('./users')
 const categoryRouter = require('./category')
 const investorRouter = require('./investor')
 const profileAthleteRouter = require('./profile_athlete')
-//const investorRouter = require('./investor')
->>>>>>> routes/api/v1/index.js
 
 router.use('/users', usersRouter)
 router.use('/category', categoryRouter)
 router.use('/investor', investorRouter)
 router.use('/profile_athlete', profileAthleteRouter)
-//router.use('/investor', investorRouter)
->>>>>>> routes/api/v1/index.js
 
 router.get('/', function (req, res, next) {
   res.render('index', { title: 'API V1' })
