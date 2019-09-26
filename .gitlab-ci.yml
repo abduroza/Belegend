@@ -1,0 +1,35 @@
+image: node:latest
+
+stages:
+  - test
+  - production
+
+test:
+  stage: test
+  variables:
+    DB_HOST_DEVELOP: 'mongodb+srv://bramastana:cobalagi@belegend-0kzug.mongodb.net/test?retryWrites=true&w=majority'
+    SECRET_KEY: 'KeyAdalahKunci'
+    DB_TYPE: 'DEVELOP'
+    SENDGRID_API_KEY: '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'
+    IMAGEKIT_ID: "belegend"
+    IMAGEKIT_URL: "https://ik.imagekit.io/belegend/"
+    IMAGEKIT_PUBLIC_KEY: "public_Pa6KlrMskcEhZwzW9P8tn7k76fM="
+    IMAGEKIT_SECRET_KEY: "private_nIALThS5/n4+Kag5zyE07obMz3Y="
+  script: 
+  - npm install
+  - npm test
+  only: 
+  - master
+
+deploy-to-heroku:
+  type: deploy
+  stage: production
+  image: ruby:latest
+  script:
+    - apt-get update -qy
+    - apt-get install -y ruby-dev
+    - gem install dpl
+    - dpl --provider=heroku --app=$HEROKU_APPNAME --api-key=$HEROKU_APIKEY
+  
+  only:
+    - master
