@@ -1,4 +1,5 @@
 const ProfileAthlete = require('../../../models/api/v1/profile_athlete')
+const Users = require('../../../models/api/v1/users')
 const FuncHelpers = require('../../../helpers/response')
 
 exports.getProfileAthlete = function(req, res, next){
@@ -15,19 +16,23 @@ exports.getProfileAthlete = function(req, res, next){
         });
 }
 
-exports.deleteProfileAthlete = function(req, res) {
-    if (req.decoded.role !== 'admin'){
-        return res.status(403).json(FuncHelpers.errorResponse('Only For Admin'))
-    }
+exports.deleteProfileAthlete = async (req, res)=> {
+    try {
+        if (req.decoded.role !== 'admin'){
+            return res.status(403).json(FuncHelpers.errorResponse('Only For Admin'))
+        }
+    
+        let id          = req.params.id; 
+        let profile_athlete = await ProfileAthlete.findByIdAndRemove(id)
 
-    let id          = req.params.id; 
-    ProfileAthlete.findByIdAndRemove(id).exec()
-        .then((profile_athlete)=>{
-            res.status(200).json(FuncHelpers.successResponse("Success Deleted"));
-        })
-        .catch((err)=>{
-            res.status(422).json(FuncHelpers.errorResponse(err));
-        });
+        let User = await Users.findById(profile_athlete.id_user)
+        User.id_profile_athlete.remove(profile_athlete)
+        User.save()
+
+        res.status(200).json(FuncHelpers.successResponse("Success Deleted"));
+    } catch (err) {
+        res.status(422).json(FuncHelpers.errorResponse(err));
+    }
 }
 
 exports.addProfileAthlete = async (req, res)=>{
@@ -35,9 +40,19 @@ exports.addProfileAthlete = async (req, res)=>{
         if (req.decoded.role !== 'athlete'){
             return res.status(403).json(FuncHelpers.errorResponse('Only For Athlete'))
         }
-        req.body['id_user'] = await req.decoded._id
 
+        let check_profile_investor = await ProfileAthlete.findOne({id_user: req.decoded._id}).select('id_user')
+        if(check_profile_investor!==null){
+            return res.status(403).json(FuncHelpers.errorResponse('Profile is exist, using edit for edit profile athlete'))
+        }
+
+        req.body['id_user'] = await req.decoded._id
         let profile_athlete = await ProfileAthlete.create(req.body)
+
+        let User = await Users.findById(req.decoded._id)
+        User.id_profile_athlete.push(profile_athlete)
+        User.save()
+
         res.status(201).json(FuncHelpers.successResponse(profile_athlete, "Add new profile athlete success"))
     } catch (err) {
         res.status(422).json(FuncHelpers.errorResponse(err, "Wrong type"))
