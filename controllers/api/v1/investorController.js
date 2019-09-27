@@ -7,6 +7,10 @@ async function addProfile(req, res){
         if (req.decoded.role !== 'investor'){
             return res.status(403).json(funcHelpers.errorResponse("Only for Investor"))
         }
+        if (await Investor.findOne({id_user: req.decoded._id}) != null){
+            return res.status(403).json(funcHelpers.errorResponse("Can't add more than one profile investor"))
+        }
+       
         let investor = await Investor.create(req.body)
         investor.id_user = req.decoded._id
         investor.save()
