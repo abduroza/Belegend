@@ -4,11 +4,90 @@ const jwt           = require('jsonwebtoken');
 const bcrypt        = require('bcryptjs');
 const env           = require('dotenv').config();
 const saltRounds    = 10;
+const Multer        = require('multer')
+var ImageKit        = require('imagekit')
+
+const storage = Multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/upload')
+    },
+    filename: function (req, file, cb) {
+        var filetype = '';
+        if (file.mimetype === 'image/gif') {
+            filetype = 'gif';
+        }
+        else if (file.mimetype === 'image/png') {
+            filetype = 'png';
+        }
+        else if (file.mimetype === 'image/jpeg') {
+            filetype = 'jpg';
+        }
+        cb(null, file.fieldname + '-' + Date.now()+'.'+filetype)
+    }
+})
+
+var upload = Multer().single('image')
+
+var imagekit = new ImageKit({
+    "imagekitId" : process.env.IMAGEKIT_ID,       
+    "apiKey"     : process.env.IMAGEKIT_PUBLIC_KEY,       
+    "apiSecret"  : process.env.IMAGEKIT_SECRET_KEY, 
+});
+
+exports.updateImage = function(req, res){
+    upload(req, res, function(err){
+        var file = req.file
+        if (!file) {
+            return res.status(422).json(FuncHelpers.errorResponse("please upload file"))
+        }
+
+        var uploadPromise;
+        uploadPromise = imagekit.upload(req.file.buffer.toString('base64'), {
+            "filename" : req.file.originalname,
+            "folder"   : "/users"
+        });
+    
+        //handle upload success and failure
+        uploadPromise.then((result)=>{
+            Users.findByIdAndUpdate(req.params.id, {image:result.url}, (err, updt)=>{
+                if(err) return res.status(422).json(FuncHelpers.errorResponse("can't update url image")) 
+
+                Users.findById(updt._id, (err, showUser)=>{
+                    if(err) return res.status(422).json(FuncHelpers.errorResponse("can't update url image"))   
+                    
+                    let data_image = {
+                        _id: showUser._id,
+                        image: showUser.image
+                    }
+                    res.status(200).json(FuncHelpers.successResponse(data_image, "URL image has been update"))
+                })
+            })     
+        })
+        .catch (err=>{
+            res.status(400).json(error("can't upload file"))
+        })
+    })
+}
 
 exports.getUsers = function(req, res, next){
-    Users.find().exec()
+    Users.findById(req.decoded._id).select('_id role email fullname image')
         .then((users)=>{
             res.status(200).json(FuncHelpers.successResponse(users));
+        })
+        .catch((err)=>{
+            res.status(422).json(FuncHelpers.errorResponse(err));
+        });
+}
+
+exports.usersDelete = function(req, res) {
+    if (req.decoded.role !== 'admin'){
+        return res.status(403).json(FuncHelpers.errorResponse('Only For Admin'))
+    }
+
+    let id          = req.params.id; 
+    Users.findByIdAndRemove(id).exec()
+        .then((users)=>{
+            res.status(200).json(FuncHelpers.successResponse("Success delete Admin"));
         })
         .catch((err)=>{
             res.status(422).json(FuncHelpers.errorResponse(err));
@@ -176,17 +255,6 @@ exports.usersUpdate = function(req, res, next){
         });
 }
 
-exports.usersDelete = function(req, res) {
-    let id          = req.params.id; 
-    Users.findByIdAndRemove(id).exec()
-        .then((users)=>{
-            res.status(200).json(FuncHelpers.successResponse(users));
-        })
-        .catch((err)=>{
-            res.status(422).json(FuncHelpers.errorResponse(err));
-        });
-}
-
 exports.usersAuth = (req, res, next) => {
     
     Users.findOne({"email": req.body.email.toLowerCase()})
@@ -195,12 +263,27 @@ exports.usersAuth = (req, res, next) => {
                 bcrypt.compare(req.body.password, users.password).then(function (result) {
                     if (result) {
 
-                        var token = jwt.sign(users.toJSON(), process.env.SECRET_KEY, { 
-                            algorithm: 'HS256',
-                            expiresIn: '1d'
-                        });
+                        Users.findOne({"email": req.body.email.toLowerCase()}).select('_id role email fullname image')
+                            .then((users)=>{
+                                var token = jwt.sign(users.toJSON(), process.env.SECRET_KEY, { 
+                                    algorithm: 'HS256',
+                                    expiresIn: '1d'
+                                });
 
-                        res.status(200).json(FuncHelpers.successResponse(token))
+                                let data_login = {
+                                    _id:   users._id,
+                                    role:   users.role,
+                                    email:   users.email,
+                                    fullname:   users.fullname,
+                                    image:   users.image,     
+                                    token:   token
+                                }
+                                
+                                res.status(200).json(FuncHelpers.successResponse(data_login))
+                            })
+                            .catch((err)=>{
+                                res.status(401).json(FuncHelpers.errorResponse(err));
+                            });
                     } else {
                         res.status(401).send(FuncHelpers.errorResponse("Email or Password is wrong"))
                     }
