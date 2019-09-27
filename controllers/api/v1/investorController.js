@@ -24,8 +24,6 @@ async function addProfile(req, res){
 async function editProfile(req, res){
     try {
         let investor = await Investor.findById(req.params.id)
-        console.log(investor.id_user)
-        console.log(req.decoded._id)
         if (req.decoded.role !== 'investor'){
             return res.status(403).json(funcHelpers.errorResponse('Only for investor'))
         } else if (req.decoded._id != investor.id_user){
@@ -44,4 +42,15 @@ async function showProfile(req, res){
     res.status(200).json(funcHelpers.successResponse(investor, 'Show profile'))
 }
 
-module.exports = {addProfile, editProfile, showProfile}
+async function deleteProfile(req, res){
+    try {
+        if (req.decoded.role !== 'admin'){
+            return res.status(403).json(funcHelpers.errorResponse('Access Denied. Only For Admin'))
+        }
+        let investor = await Investor.findByIdAndDelete(req.params.id)
+        res.status(200).json(funcHelpers.successResponse(investor, "Delete Profile Investor Success"))
+    } catch (err) {
+        res.status(422).json(funcHelpers.errorResponse(err.message))
+    }
+}
+module.exports = {addProfile, editProfile, showProfile, deleteProfile}
